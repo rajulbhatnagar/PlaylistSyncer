@@ -19,7 +19,7 @@ const BASE_SPOTIFY_URI = "https://api.spotify.com/v1/"
 const (
 	PATH_SPOTIFY_USER            = "me"
 	PATH_SPOTIFY_LIST_PLAYLISTS  = "users/%s/playlists?limit=%d&offset=%d"
-	PATH_SPOTIFY_LIST_PLAYLIST   = "users/%s/playlists/%s"
+	PATH_SPOTIFY_LIST_PLAYLIST   = "users/%s/playlists/%s/tracks?limit=%d&offset=%d"
 	PATH_SPOTIFY_SEARCH          = ""
 	PATH_SPOTIFY_CREATE_PLAYLIST = ""
 	PATH_SPOTIFY_ADD_TRACK       = ""
@@ -157,21 +157,35 @@ func (c *spotifyClient) getCurrentUser() (*models.SpotifyUser, error) {
 }
 
 func (c *spotifyClient) getPlaylist(playlist models.SpotifyPlaylist) (*Playlist, error) {
-	response, err := c.makeRequest(http.MethodGet, fmt.Sprintf(PATH_SPOTIFY_LIST_PLAYLIST, playlist.Owner.Id, playlist.Id), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch playlist [name=%s][id=%s][err=%v]", playlist.Name, playlist.Id, err)
+	limit := 100
+	offset := 0
+	var mergedSpotifyPlaylistTracks *models.SpotifyPlaylistTracks
+	for {
+		response, err := c.makeRequest(http.MethodGet, fmt.Sprintf(PATH_SPOTIFY_LIST_PLAYLIST, playlist.Owner.Id, playlist.Id, limit, offset), nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch playlist [name=%s][id=%s][err=%v]", playlist.Name, playlist.Id, err)
+		}
+		dec := json.NewDecoder(strings.NewReader(response))
+		var spotifyPlaylistTracks models.SpotifyPlaylistTracks
+		err = dec.Decode(&spotifyPlaylistTracks)
+		if err != nil {
+			return nil, err
+		}
+		if mergedSpotifyPlaylistTracks == nil {
+			mergedSpotifyPlaylistTracks = &spotifyPlaylistTracks
+		} else {
+			mergedSpotifyPlaylistTracks.Tracks = append(mergedSpotifyPlaylistTracks.Tracks, spotifyPlaylistTracks.Tracks...)
+		}
+		offset += limit
+		if mergedSpotifyPlaylistTracks.Total < offset {
+			break
+		}
 	}
-	dec := json.NewDecoder(strings.NewReader(response))
-	var spotifyPlaylist models.SpotifyPlaylist
-	err = dec.Decode(&spotifyPlaylist)
-	if err != nil {
-		return nil, err
-	}
-	return mediaPlaylist(spotifyPlaylist), nil
+	return mediaPlaylist(playlist, *mergedSpotifyPlaylistTracks), nil
 }
 
-func mediaPlaylist(spotifyPlaylist models.SpotifyPlaylist) *Playlist {
-	return &Playlist{Name: spotifyPlaylist.Name, Description: spotifyPlaylist.Description, Id: spotifyPlaylist.Id, Songs: mediaSongs(spotifyPlaylist.Tracks.Tracks)}
+func mediaPlaylist(spotifyPlaylist models.SpotifyPlaylist, spotifyPlaylistTracks models.SpotifyPlaylistTracks) *Playlist {
+	return &Playlist{Name: spotifyPlaylist.Name, Description: spotifyPlaylist.Description, Id: spotifyPlaylist.Id, Songs: mediaSongs(spotifyPlaylistTracks.Tracks)}
 }
 func mediaSongs(tracks []models.SpotifyTrackWrapper) []Song {
 	var Songs []Song

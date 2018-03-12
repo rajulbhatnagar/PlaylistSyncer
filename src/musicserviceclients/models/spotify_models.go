@@ -25,6 +25,9 @@ type SpotifyTrack struct {
 
 type SpotifyPlaylistTracks struct {
 	Tracks []SpotifyTrackWrapper `json:"items"`
+	Limit  int                   `json:"limit"`
+	Offset int                   `json:"offset"`
+	Total  int                   `json:"total"`
 }
 
 type SpotifyPlaylistsOwner struct {
