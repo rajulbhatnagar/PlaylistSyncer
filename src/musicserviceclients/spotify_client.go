@@ -157,7 +157,7 @@ func (c *spotifyClient) getCurrentUser() (*models.SpotifyUser, error) {
 }
 
 func (c *spotifyClient) getPlaylist(playlist models.SpotifyPlaylist) (*Playlist, error) {
-	response, err := c.makeRequest(http.MethodGet, fmt.Sprintf(PATH_SPOTIFY_LIST_PLAYLIST, c.userId, playlist.Id), nil)
+	response, err := c.makeRequest(http.MethodGet, fmt.Sprintf(PATH_SPOTIFY_LIST_PLAYLIST, playlist.Owner.Id, playlist.Id), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playlist [name=%s][id=%s][err=%v]", playlist.Name, playlist.Id, err)
 	}

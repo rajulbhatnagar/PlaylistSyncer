@@ -88,11 +88,11 @@ func parseArgs() (*CliArguments, error) {
 	flag.Parse()
 
 	var errs []error
-	if len(*sourceService) == 0 || !validService(sourceService) {
+	if len(*sourceService) == 0 || !validService(*sourceService) {
 		errs = append(errs, fmt.Errorf("Invalid source service=%s", *sourceService))
 	}
 
-	if len(*destinationService) == 0 || !validService(destinationService) {
+	if len(*destinationService) == 0 || !validService(*destinationService) {
 		errs = append(errs, fmt.Errorf("Invalid destination service=%s", *destinationService))
 	}
 
@@ -114,6 +114,10 @@ func parseArgs() (*CliArguments, error) {
 	return &CliArguments{sourceService: *sourceService, destinationService: *destinationService, playList: *playList}, nil
 }
 
-func validService(string *string) bool {
-	return true
+func validService(service string) bool {
+	if service == SPOTIFY || service == GOOGLE_PLAY_MUSIC {
+		return true
+	} else {
+		return false
+	}
 }
